@@ -1,26 +1,11 @@
-#!/usr/bin/env python
-# pylint: disable=unused-argument, wrong-import-position
-# This program is dedicated to the public domain under the CC0 license.
-
-"""
-Don't forget to enable inline mode with @BotFather
-
-First, a few handler functions are defined. Then, those functions are passed to
-the Application and registered at their respective places.
-Then, the bot is started and runs until we press Ctrl-C on the command line.
-
-Usage:
-Basic inline bot example. Applies different text transformations.
-Press Ctrl-C on the command line or send a signal to the process to stop the
-bot.
-"""
 import logging
 import sqlite3
 from html import escape
 import random
 from uuid import uuid4
 from telegram import __version__ as TG_VER
-
+with open('Token.txt') as f:
+    token = f.readline()
 '''database = sqlite3.connect("quotes.db")
 cur = database.cursor()
 res = cur.execute("""INSERT INTO quotes VALUES (1, 'quote1'),(2, 'quote2'),(3, 'quote3');""")
@@ -79,11 +64,11 @@ async def inline_query(update, context):
         )
     ]
     await update.inline_query.answer(results, cache_time=0)"""
-
+print(token.strip())
 def main() -> None:
     """Run the bot."""
     # Create the Application and pass it your bot's token.
-    application = Application.builder().token("5822167170:AAFDQIpoijIpRR49-CMfkaZ7DNs-m7uLYQU").build()
+    application = Application.builder().token(token.strip()).build()
     application.add_handler(InlineQueryHandler(inline_query))
     # Run the bot until the user presses Ctrl-C
     application.run_polling()
