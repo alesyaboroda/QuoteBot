@@ -1,7 +1,5 @@
 import logging
 import sqlite3
-from html import escape
-import random
 from uuid import uuid4
 from telegram import __version__ as TG_VER
 with open('Token.txt') as f:
@@ -23,7 +21,6 @@ if __version_info__ < (20, 0, 0, "alpha", 1):
         f"visit https://docs.python-telegram-bot.org/en/v{TG_VER}/examples.html"
     )
 from telegram import InlineQueryResultArticle, InputTextMessageContent, Update
-from telegram.constants import ParseMode
 from telegram.ext import Application, CommandHandler, ContextTypes, InlineQueryHandler
 
 # Enable logging
@@ -31,40 +28,26 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
+
+# returns random row from SQL database
 def generate_reply():
-    replies = """
-              Hello
-              Goodbye
-              Thanks!
-              Your welcome!
-              See you around!""".splitlines()
-    r = random.choice(replies).strip()
+    database = sqlite3.connect("quotes.db")
+    cur = database.cursor()
+    res = cur.execute("SELECT quote FROM quotes ORDER BY RANDOM() LIMIT 1;")
+    r = str(res.fetchall())
+    database.close()
     return r
+
 async def inline_query(update, context):
     results = [
         InlineQueryResultArticle(
             id=str(uuid4()),
             title="random",
-            input_message_content=InputTextMessageContent(generate_reply())
+            input_message_content=InputTextMessageContent(generate_reply().strip())
         )
     ]
     await update.inline_query.answer(results, cache_time=0)
 
-"""async def inline_query(update, context):
-    database = sqlite3.connect("quotes.db")
-    cur = database.cursor()
-    res = cur.execute("SELECT quote FROM quotes ORDER BY RANDOM() LIMIT 1;")
-    result = str(res.fetchall())
-    database.close()
-    results = [
-        InlineQueryResultArticle(
-            id=str(uuid4()),
-            title="random",
-            input_message_content=InputTextMessageContent(result)
-        )
-    ]
-    await update.inline_query.answer(results, cache_time=0)"""
-print(token.strip())
 def main() -> None:
     """Run the bot."""
     # Create the Application and pass it your bot's token.
