@@ -1,24 +1,20 @@
 import logging
 import sqlite3
 from uuid import uuid4
-from telegram import __version__ as TG_VER, ReplyKeyboardMarkup, ReplyKeyboardRemove
-import telegram.ext.filters
-from telegram.constants import ChatAction
+from telegram import __version__ as TG_VER, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineQueryResultArticle, \
+    InputTextMessageContent, Update
+from telegram.ext import Application, CommandHandler, ContextTypes, InlineQueryHandler, MessageHandler, filters, \
+    ConversationHandler
 
+# Assigns token number from .txt file to variable
 with open('Token.txt') as f:
     token = f.readline()
 
-database = sqlite3.connect("quotes.db")
-cur = database.cursor()
-res = cur.execute("""DELETE FROM quotes;""")
-res = cur.execute(
-    """INSERT INTO quotes VALUES (1, 'Симка-фукусимка'),(2, 'Светофор-Колумб'),(3, 'Магния-Барто'),(4, 'Дискотека-Бавария');""")
-database.commit()
-
+# Version control
 try:
     from telegram import __version_info__
 except ImportError:
-    __version_info__ = (0, 0, 0, 0, 0)  # type: ignore[assignment]
+    __version_info__ = (0, 0, 0, 0, 0)
 
 if __version_info__ < (20, 0, 0, "alpha", 1):
     raise RuntimeError(
@@ -26,12 +22,8 @@ if __version_info__ < (20, 0, 0, "alpha", 1):
         f"{TG_VER} version of this example, "
         f"visit https://docs.python-telegram-bot.org/en/v{TG_VER}/examples.html"
     )
-from telegram import InlineQueryResultArticle, InputTextMessageContent, InlineKeyboardButton, InlineKeyboardMarkup, \
-    Update
-from telegram.ext import Application, CommandHandler, ContextTypes, InlineQueryHandler, MessageHandler, filters, \
-    ConversationHandler
 
-# Enable logging
+# Enable logging.
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
@@ -40,10 +32,12 @@ logger = logging.getLogger(__name__)
 ADD, REMOVE, SLEEP, CHOOSING, CANCEL = range(5)
 
 
+# Function to clean string received from SQL database.
 def clean(SQL_str):
     return SQL_str.replace('(', '').replace(')', '').replace('[', '').replace(']', '').replace(',', '').replace("'", '')
 
 
+# Function that used to find new id when inserting quote into database.
 def find_new_id():
     database = sqlite3.connect("quotes.db")
     cur = database.cursor()
@@ -53,7 +47,7 @@ def find_new_id():
     return int(res) + 1
 
 
-# returns random row from SQL database
+# returns random row from SQL database.
 def generate_reply():
     database = sqlite3.connect("quotes.db")
     cur = database.cursor()
@@ -63,6 +57,7 @@ def generate_reply():
     return r
 
 
+# This function sends random quote to a chat via inline query.
 async def inline_query(update, context):
     results = [
         InlineQueryResultArticle(
@@ -74,6 +69,7 @@ async def inline_query(update, context):
     await update.inline_query.answer(results, cache_time=0)
 
 
+# Creates reply keyboard, allowing to add or remove rows from database
 async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     reply_keyboard = [["Add quote", "Remove quote", "Cancel"]]
     await update.message.reply_text(
@@ -84,6 +80,7 @@ async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return CHOOSING
 
 
+# Sets ConversationHandler state depending on what have been pressed on reply keyboard.
 async def choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     text = update.message.text
     if text == "Add quote":
@@ -97,6 +94,7 @@ async def choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         return ConversationHandler.END
 
 
+# Shows all quotes in database
 async def inspect(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     database = sqlite3.connect("quotes.db")
     cur = database.cursor()
@@ -108,6 +106,7 @@ async def inspect(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 
+# Inserts quote in database
 async def insert(update: Update, context: ContextTypes.DEFAULT_TYPE):
     quote = update.message.text
     database = sqlite3.connect("quotes.db")
@@ -120,7 +119,8 @@ async def insert(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 
-async def delete(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+# Removes quote from database
+async def delete(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     id_number = int(update.message.text)
     database = sqlite3.connect("quotes.db")
     cur = database.cursor()
@@ -141,9 +141,9 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 
+# Run the bot
 def main() -> None:
-    """Run the bot."""
-    # Create the Application and pass it your bot's token.
+    # Create the Application and pass it your bot token.
     application = Application.builder().token(token.strip()).build()
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("admin", admin)],
